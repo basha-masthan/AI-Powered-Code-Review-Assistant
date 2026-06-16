@@ -22,13 +22,20 @@ export class ReviewsService {
         where: { id: dto.fileId, projectId: dto.projectId },
       });
       if (!file) throw new NotFoundException('File not found');
-      codeContent = `File: ${file.path}\n\n${file.content}`;
+      const snippet = file.content.length > 3000 ? file.content.slice(0, 3000) + '\n...[truncated]' : file.content;
+      codeContent = `File: ${file.path}\n\n${snippet}`;
     } else {
       const files = await this.prisma.file.findMany({
         where: { projectId: dto.projectId },
+        take: 5,
       });
       if (files.length === 0) throw new BadRequestException('No files in project');
-      codeContent = files.map((f) => `File: ${f.path}\n\n${f.content}`).join('\n\n---\n\n');
+      codeContent = files
+        .map((f) => {
+          const snippet = f.content.length > 2000 ? f.content.slice(0, 2000) + '\n...[truncated]' : f.content;
+          return `File: ${f.path}\n\n${snippet}`;
+        })
+        .join('\n\n---\n\n');
     }
 
     // Create review record (PENDING)
@@ -141,9 +148,14 @@ Review the provided code. Provide your response strictly in the following JSON f
     const aiProvider = await this.prisma.aIProvider.findUnique({ where: { id: aiProviderId } });
     if (!aiProvider || aiProvider.userId !== userId) throw new NotFoundException();
 
-    const files = await this.prisma.file.findMany({ where: { projectId } });
+    const files = await this.prisma.file.findMany({ where: { projectId }, take: 5 });
     if (files.length === 0) throw new BadRequestException();
-    const codeContent = files.map((f) => `File: ${f.path}\n\n${f.content}`).join('\n\n---\n\n');
+    const codeContent = files
+      .map((f) => {
+        const snippet = f.content.length > 2000 ? f.content.slice(0, 2000) + '\n...[truncated]' : f.content;
+        return `File: ${f.path}\n\n${snippet}`;
+      })
+      .join('\n\n---\n\n');
 
     const chat = new ChatOpenAI({
       modelName: aiProvider.modelName,
@@ -176,9 +188,11 @@ Review the provided code. Provide your response strictly in the following JSON f
       maxTokens: 1500,
     });
 
+    const fileSnippet = file.content.length > 3000 ? file.content.slice(0, 3000) + '\n...[truncated]' : file.content;
+
     const res = await chat.invoke([
       new SystemMessage('You are an expert QA engineer. Generate Unit Tests for the provided code file using a standard testing framework like Jest or PyTest. Return ONLY the code for the test, nothing else.'),
-      new HumanMessage(`File: ${file.path}\n\n${file.content}`),
+      new HumanMessage(`File: ${file.path}\n\n${fileSnippet}`),
     ]);
 
     return { content: res.content as string };

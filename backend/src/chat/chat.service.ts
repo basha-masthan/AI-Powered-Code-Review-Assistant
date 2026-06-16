@@ -36,20 +36,31 @@ export class ChatService {
       },
     });
 
-    // Fetch simple context (all project files)
+    // Fetch simple context — limit to top 5 files, truncate each to 1500 chars
     const files = await this.prisma.file.findMany({
       where: { projectId: dto.projectId },
+      take: 5,
     });
-    const codeContext = files.map((f) => `File: ${f.path}\n\n${f.content}`).join('\n\n---\n\n');
+    const codeContext = files
+      .map((f) => {
+        const snippet = f.content.length > 1500 ? f.content.slice(0, 1500) + '\n...[truncated]' : f.content;
+        return `File: ${f.path}\n\n${snippet}`;
+      })
+      .join('\n\n---\n\n');
 
-    // Fetch previous messages
+    // Fetch previous messages — only last 6 to stay within context limits
     const history = await this.prisma.chatMessage.findMany({
       where: { chatSessionId: sessionId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
+      take: 6,
     });
+    history.reverse(); // restore chronological order
 
     const messages: BaseMessage[] = [
-      new SystemMessage(`You are an AI assistant helping a developer with their project. Here is the codebase context:\n\n${codeContext}`),
+      new SystemMessage(
+        `You are an AI assistant helping a developer understand their project. ` +
+        `Here is a sample of the codebase (may be truncated for brevity):\n\n${codeContext}`
+      ),
     ];
 
     for (const msg of history) {
@@ -65,7 +76,7 @@ export class ChatService {
       configuration: {
         baseURL: aiProvider.baseUrl,
       },
-      maxTokens: 1000,
+      maxTokens: 800,
     });
 
     const res = await chat.invoke(messages);
