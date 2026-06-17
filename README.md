@@ -37,8 +37,8 @@ The backend will run on `http://localhost:3001`.
 
 **Environment Variables** (`backend/.env`):
 ```
-DATABASE_URL="postgresql://neondb_owner:npg_QlIJw2DBXUS7@ep-cool-flower-adfpwyt8-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&schema=strix_ai"
-JWT_SECRET="your-super-secret-jwt-key-change-in-production"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=require"
+JWT_SECRET="your-super-secret-jwt-key"
 PORT=3001
 
 # Optional: Pre-configure AI providers on registration
