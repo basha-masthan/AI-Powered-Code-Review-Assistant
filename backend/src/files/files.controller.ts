@@ -1,4 +1,4 @@
-import { Controller, Post, UseInterceptors, UploadedFile, Param, UseGuards, Request, Get, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, Param, UseGuards, Request, Get, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, Body } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FilesService } from './files.service';
 import { AuthGuard } from '../auth/auth.guard';
@@ -30,6 +30,15 @@ export class FilesController {
   @Get()
   getFiles(@Request() req: any, @Param('projectId') projectId: string) {
     return this.filesService.getProjectFiles(projectId, req.user.sub);
+  }
+
+  @Post('github')
+  importFromGitHub(
+    @Request() req: any,
+    @Param('projectId') projectId: string,
+    @Body() body: { repoUrl: string },
+  ) {
+    return this.filesService.importFromGitHub(projectId, req.user.sub, body.repoUrl);
   }
 
   @Get(':fileId')

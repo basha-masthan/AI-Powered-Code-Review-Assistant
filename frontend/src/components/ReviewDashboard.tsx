@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, Play, FileCheck2, AlertCircle, AlertTriangle, Info, Plus } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { RefreshCw, Play, FileCheck2, AlertCircle, AlertTriangle, Info, Search, FileText, Beaker } from "lucide-react";
 
 export default function ReviewDashboard({ projectId }: { projectId: string }) {
   const [reviews, setReviews] = useState<any[]>([]);
@@ -19,6 +19,7 @@ export default function ReviewDashboard({ projectId }: { projectId: string }) {
   const [reviewMode, setReviewMode] = useState<string>("SECURITY");
   const [isTriggering, setIsTriggering] = useState(false);
   const [selectedReview, setSelectedReview] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchReviews();
@@ -47,6 +48,16 @@ export default function ReviewDashboard({ projectId }: { projectId: string }) {
     }
   };
 
+  const filteredReviews = useMemo(() => {
+    if (!searchQuery) return reviews;
+    const q = searchQuery.toLowerCase();
+    return reviews.filter(r =>
+      r.mode.toLowerCase().includes(q) ||
+      r.status.toLowerCase().includes(q) ||
+      (r.summary && r.summary.toLowerCase().includes(q))
+    );
+  }, [reviews, searchQuery]);
+
   const handleTriggerReview = async () => {
     if (!selectedProvider) return toast.error("Please select an AI Provider in Settings first");
     setIsTriggering(true);
@@ -57,7 +68,7 @@ export default function ReviewDashboard({ projectId }: { projectId: string }) {
         aiProviderId: selectedProvider,
       });
       toast.success("Review triggered! It will run in the background.");
-      fetchReviews();
+      setTimeout(fetchReviews, 2000);
     } catch {
       toast.error("Failed to trigger review");
     } finally {
@@ -74,6 +85,43 @@ export default function ReviewDashboard({ projectId }: { projectId: string }) {
     }
   };
 
+  const handleGenerateDocs = async () => {
+    if (!selectedProvider) return toast.error("Please select an AI Provider first");
+    try {
+      const res = await api.get(`/reviews/bonus/generate-docs?projectId=${projectId}&aiProviderId=${selectedProvider}`);
+      const blob = new Blob([res.data.content], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'README.md';
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Documentation generated and downloaded!");
+    } catch {
+      toast.error("Failed to generate documentation");
+    }
+  };
+
+  const handleGenerateTests = async () => {
+    if (!selectedProvider) return toast.error("Please select an AI Provider first");
+    try {
+      const filesRes = await api.get(`/projects/${projectId}/files`);
+      if (filesRes.data.length === 0) return toast.error("No files in project");
+      const firstFile = filesRes.data[0];
+      const res = await api.get(`/reviews/bonus/generate-test?fileId=${firstFile.id}&aiProviderId=${selectedProvider}`);
+      const blob = new Blob([res.data.content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${firstFile.path.split('/').pop()}.test.js`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Tests generated and downloaded!");
+    } catch {
+      toast.error("Failed to generate tests");
+    }
+  };
+
   const getSeverityIcon = (severity: string) => {
     switch(severity) {
       case 'CRITICAL': return <AlertCircle className="w-5 h-5 text-red-500" />;
@@ -85,7 +133,6 @@ export default function ReviewDashboard({ projectId }: { projectId: string }) {
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-[600px]">
-      {/* Left sidebar: Trigger and List */}
       <div className="w-full md:w-1/3 flex flex-col gap-4">
         <Card>
           <CardHeader className="pb-3">
@@ -118,9 +165,20 @@ export default function ReviewDashboard({ projectId }: { projectId: string }) {
               </Select>
             </div>
             <Button className="w-full" onClick={handleTriggerReview} disabled={isTriggering}>
-              {isTriggering ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />} 
+              {isTriggering ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
               Start Review
             </Button>
+            <div className="border-t pt-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Bonus Tools</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={handleGenerateDocs}>
+                  <FileText className="w-3.5 h-3.5 mr-1" /> Docs
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1" onClick={handleGenerateTests}>
+                  <Beaker className="w-3.5 h-3.5 mr-1" /> Tests
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -129,11 +187,22 @@ export default function ReviewDashboard({ projectId }: { projectId: string }) {
             <CardTitle className="text-lg">History</CardTitle>
             <Button variant="ghost" size="icon" onClick={fetchReviews}><RefreshCw className="w-4 h-4" /></Button>
           </CardHeader>
+          <div className="px-2 pb-2 pt-1">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search reviews..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="h-7 pl-8 text-xs"
+              />
+            </div>
+          </div>
           <ScrollArea className="flex-1">
-            <div className="p-2 space-y-2">
-              {reviews.map((rev) => (
-                <div 
-                  key={rev.id} 
+            <div className="p-2 pt-0 space-y-2">
+              {filteredReviews.map((rev) => (
+                <div
+                  key={rev.id}
                   onClick={() => handleViewReview(rev.id)}
                   className={`p-3 rounded-lg border cursor-pointer hover:bg-muted transition-colors ${selectedReview?.id === rev.id ? 'border-primary bg-primary/5' : ''}`}
                 >
@@ -148,15 +217,16 @@ export default function ReviewDashboard({ projectId }: { projectId: string }) {
                   </p>
                 </div>
               ))}
-              {reviews.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground p-4">No reviews yet.</p>
+              {filteredReviews.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground p-4">
+                  {searchQuery ? "No reviews match your search." : "No reviews yet."}
+                </p>
               )}
             </div>
           </ScrollArea>
         </Card>
       </div>
 
-      {/* Right side: Review Details */}
       <div className="flex-1 border rounded-xl overflow-hidden bg-card flex flex-col">
         {selectedReview ? (
           <>
@@ -174,7 +244,7 @@ export default function ReviewDashboard({ projectId }: { projectId: string }) {
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedReview.summary || "No summary available. Analysis might still be pending."}</p>
               </div>
             </div>
-            
+
             <ScrollArea className="flex-1 p-6">
               {selectedReview.issues && selectedReview.issues.length > 0 ? (
                 <div className="space-y-4">

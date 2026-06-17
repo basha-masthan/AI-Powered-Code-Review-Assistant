@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
-import { Send, Bot, User, RefreshCw, Code2 } from "lucide-react";
+import { Send, Bot, User, RefreshCw, Code2, Plus } from "lucide-react";
 
 export default function AIChat({ projectId }: { projectId: string }) {
   const [providers, setProviders] = useState<any[]>([]);
@@ -189,5 +189,3 @@ export default function AIChat({ projectId }: { projectId: string }) {
   );
 }
 
-// Quick component missing import added directly
-import { Plus } from "lucide-react";
