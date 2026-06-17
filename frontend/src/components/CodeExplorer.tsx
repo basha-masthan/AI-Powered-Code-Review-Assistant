@@ -209,23 +209,32 @@ export default function CodeExplorer({ projectId }: { projectId: string }) {
     }
   };
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!selectedFile && files.length > 0) {
+        handleSelectFile(files[0]);
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [selectedFile, files]);
+
   return (
-    <div className="flex h-[600px] border rounded-md overflow-hidden">
-      <div className="w-1/3 border-r bg-muted/20 flex flex-col">
-        <div className="p-3 font-semibold border-b bg-muted/40 flex items-center gap-2">
+    <div className="flex flex-col lg:flex-row gap-4 border rounded-md overflow-hidden bg-card p-4">
+      <div className="w-full lg:w-1/3 border border-border/50 rounded-lg bg-background/50 backdrop-blur-sm flex flex-col min-h-[200px] lg:min-h-[500px]">
+        <div className="p-3 font-semibold border-b border-border/50 bg-muted/30 flex items-center gap-2 shrink-0">
           <Folder className="w-4 h-4" /> Files
           <Badge variant="outline" className="ml-auto text-xs">{files.length}</Badge>
         </div>
-        <div className="p-2 border-b">
+        <div className="p-2 border-b bg-background/30 shrink-0">
           <Input
             placeholder="Search files..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="h-7 text-xs"
+            className="h-8 text-sm"
           />
         </div>
-        <ScrollArea className="flex-1">
-          <div className="py-1">
+        <ScrollArea className="flex-1 min-h-0 p-2">
+          <div className="py-1 space-y-0.5">
             {filteredTree.map(node => (
               <TreeNodeItem
                 key={node.path}
@@ -238,7 +247,7 @@ export default function CodeExplorer({ projectId }: { projectId: string }) {
               />
             ))}
             {filteredTree.length === 0 && (
-              <div className="text-center text-sm text-muted-foreground p-4">
+              <div className="text-center text-sm text-muted-foreground p-8">
                 {searchQuery ? "No matching files." : "No files uploaded."}
               </div>
             )}
@@ -246,17 +255,17 @@ export default function CodeExplorer({ projectId }: { projectId: string }) {
         </ScrollArea>
       </div>
 
-      <div className="flex-1 flex flex-col bg-background">
+      <div className="w-full lg:flex-1 flex flex-col bg-background border border-border/50 rounded-lg min-h-[400px] lg:min-h-[500px]">
         {selectedFile ? (
           <>
-            <div className="p-3 border-b flex justify-between items-center bg-muted/10">
+            <div className="p-3 border-b border-border/50 flex justify-between items-center bg-muted/20 shrink-0">
               <div className="flex items-center gap-2 font-mono text-sm">
                 <Code className="w-4 h-4 text-muted-foreground" />
                 {selectedFile.path}
               </div>
               <Badge variant="secondary">{getLanguage(selectedFile.path)}</Badge>
             </div>
-            <ScrollArea className="flex-1 bg-[#1E1E1E]">
+            <ScrollArea className="flex-1 min-h-0 bg-[#1E1E1E] rounded-b-lg">
               <SyntaxHighlighter
                 language={getLanguage(selectedFile.path)}
                 style={vscDarkPlus}
@@ -268,7 +277,7 @@ export default function CodeExplorer({ projectId }: { projectId: string }) {
             </ScrollArea>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground flex-col gap-4">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground flex-col gap-4 p-8">
             <Code className="w-12 h-12 opacity-20" />
             <p>Select a file to view its content</p>
           </div>
