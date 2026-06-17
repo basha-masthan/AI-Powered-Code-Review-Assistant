@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuthStore } from "@/lib/store";
 import api from "@/lib/api";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Code, MessageSquareCode, FileSearch, Upload, GitPullRequest, Sparkles, X, FileUp } from "lucide-react";
@@ -14,12 +13,18 @@ import CodeExplorer from "@/components/CodeExplorer";
 import ReviewDashboard from "@/components/ReviewDashboard";
 import AIChat from "@/components/AIChat";
 
+const TABS = [
+  { value: "explorer", label: "Code Explorer", icon: Code },
+  { value: "reviews",  label: "AI Reviews",   icon: FileSearch },
+  { value: "chat",     label: "AI Chat",       icon: MessageSquareCode },
+];
+
 export default function ProjectPage() {
   const params = useParams();
   const projectId = params.id as string;
-  const { user } = useAuthStore();
   const router = useRouter();
   const [project, setProject] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("explorer");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadOptions, setShowUploadOptions] = useState(false);
@@ -48,7 +53,6 @@ export default function ProjectPage() {
   const handleUploadZip = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-
     setIsUploading(true);
     try {
       await api.post(`/projects/${projectId}/files/upload`, formData, {
@@ -71,43 +75,24 @@ export default function ProjectPage() {
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-    dragCounter.current = 0;
-
+    e.preventDefault(); e.stopPropagation();
+    setIsDragOver(false); dragCounter.current = 0;
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const zipFile = Array.from(files).find(f => f.name.endsWith('.zip'));
-      if (zipFile) {
-        handleUploadZip(zipFile);
-      } else {
-        toast.error("Please drop a .zip file");
-      }
+      if (zipFile) handleUploadZip(zipFile);
+      else toast.error("Please drop a .zip file");
     }
   }, [projectId]);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
+  const handleDragOver  = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); }, []);
   const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current++;
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      setIsDragOver(true);
-    }
+    e.preventDefault(); e.stopPropagation(); dragCounter.current++;
+    if (e.dataTransfer.items?.length > 0) setIsDragOver(true);
   }, []);
-
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current--;
-    if (dragCounter.current === 0) {
-      setIsDragOver(false);
-    }
+    e.preventDefault(); e.stopPropagation(); dragCounter.current--;
+    if (dragCounter.current === 0) setIsDragOver(false);
   }, []);
 
   const handleImportGitHub = async () => {
@@ -116,109 +101,142 @@ export default function ProjectPage() {
     try {
       await api.post(`/projects/${projectId}/files/github`, { repoUrl: githubUrl });
       toast.success("Repository imported successfully!");
-      setGithubUrl("");
-      setShowUploadOptions(false);
+      setGithubUrl(""); setShowUploadOptions(false);
       window.location.reload();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to import repository");
-    } finally {
-      setIsImporting(false);
-    }
+    } finally { setIsImporting(false); }
   };
 
-  if (!project) return <div className="p-8 text-center animate-pulse">Loading project...</div>;
+  if (!project) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <Sparkles className="w-8 h-8 text-fuchsia-400 animate-pulse" />
+        <p className="text-muted-foreground text-sm">Loading project...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="border-b bg-muted/10">
-        <div className="max-w-7xl mx-auto p-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen flex flex-col bg-background">
+
+      {/* ── Clean Glassmorphic Header ─────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-background/70 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+
+          {/* Left: back + project name */}
+          <div className="flex items-center gap-3 min-w-0">
             <Link href="/dashboard">
-              <Button variant="ghost" size="icon"><ArrowLeft className="w-5 h-5" /></Button>
+              <Button variant="ghost" size="icon" className="shrink-0 w-8 h-8 hover:bg-white/5 rounded-full">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
             </Link>
-            <div>
-              <h1 className="text-xl font-bold flex items-center gap-2"><Code className="w-5 h-5 text-primary"/> {project.name}</h1>
-              <p className="text-sm text-muted-foreground">{project.description}</p>
+            <div className="min-w-0">
+              <h1 className="text-base font-bold truncate flex items-center gap-2">
+                <Code className="w-4 h-4 text-fuchsia-400 shrink-0" />
+                {project.name}
+              </h1>
+              {project.description && (
+                <p className="text-xs text-muted-foreground truncate">{project.description}</p>
+              )}
             </div>
           </div>
-          <div className="relative">
-            <Button onClick={() => setShowUploadOptions(!showUploadOptions)} disabled={isUploading}>
-              {isUploading ? <Sparkles className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-              {isUploading ? "Uploading..." : "Upload Code"}
+
+          {/* Right: Upload button + dropdown */}
+          <div className="relative shrink-0">
+            <Button
+              size="sm"
+              onClick={() => setShowUploadOptions(!showUploadOptions)}
+              disabled={isUploading}
+              className="bg-fuchsia-600 hover:bg-fuchsia-500 text-white h-8 px-3 text-xs gap-1.5"
+            >
+              {isUploading
+                ? <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                : <Upload className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{isUploading ? "Uploading…" : "Upload Code"}</span>
             </Button>
+
             {showUploadOptions && (
-              <div className="absolute right-0 top-full mt-2 w-96 bg-card border rounded-xl shadow-xl z-50 p-4 space-y-4">
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 glassmorphism border border-white/10 rounded-2xl shadow-2xl z-50 p-5 space-y-4">
                 <div className="flex justify-between items-center">
                   <h3 className="font-semibold text-sm">Upload Source Code</h3>
-                  <Button variant="ghost" size="icon-xs" onClick={() => setShowUploadOptions(false)}>
+                  <button onClick={() => setShowUploadOptions(false)} className="text-muted-foreground hover:text-foreground transition-colors">
                     <X className="w-4 h-4" />
-                  </Button>
+                  </button>
                 </div>
 
-                {/* Option 1: ZIP Upload */}
                 <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${isDragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'}`}
+                  onDrop={handleDrop} onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter} onDragLeave={handleDragLeave}
                   onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
+                    isDragOver ? 'border-fuchsia-500 bg-fuchsia-500/5' : 'border-white/10 hover:border-fuchsia-500/50 hover:bg-white/5'
+                  }`}
                 >
                   <input type="file" accept=".zip" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
-                  <FileUp className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium">Drop ZIP file here or click to browse</p>
+                  <FileUp className="w-7 h-7 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium">Drop ZIP here or click to browse</p>
                   <p className="text-xs text-muted-foreground mt-1">Max 50MB</p>
                 </div>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">or import from GitHub</span>
-                  </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="flex-1 border-t border-white/10" />
+                  or import from GitHub
+                  <span className="flex-1 border-t border-white/10" />
                 </div>
 
-                {/* Option 2: GitHub URL */}
                 <div className="flex gap-2">
                   <Input
                     placeholder="https://github.com/owner/repo"
                     value={githubUrl}
                     onChange={e => setGithubUrl(e.target.value)}
-                    className="flex-1"
+                    className="flex-1 h-9 bg-background/50 border-white/10 text-sm"
                   />
-                  <Button onClick={handleImportGitHub} disabled={isImporting || !githubUrl.trim()} size="sm">
+                  <Button onClick={handleImportGitHub} disabled={isImporting || !githubUrl.trim()} size="sm" className="h-9 shrink-0">
                     <GitPullRequest className="w-4 h-4 mr-1" />
-                    {isImporting ? "..." : "Import"}
+                    {isImporting ? "…" : "Import"}
                   </Button>
                 </div>
               </div>
             )}
           </div>
         </div>
+      </header>
+
+      {/* ── Responsive Smart Tab Bar ─────────────────────────────────── */}
+      <div className="max-w-7xl w-full mx-auto px-4 pt-4">
+        <div className="flex gap-1 p-1 glassmorphism border border-white/5 rounded-2xl w-fit">
+          {TABS.map(({ value, label, icon: Icon }) => {
+            const isActive = activeTab === value;
+            return (
+              <button
+                key={value}
+                onClick={() => setActiveTab(value)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                  isActive
+                    ? "bg-fuchsia-600 text-white shadow-[0_0_15px_rgba(192,38,211,0.35)]"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {/*
+                  Active tab: ALWAYS show the label (even on tiny screens)
+                  Inactive tabs: hide label on tiny screens (<sm), show from sm+
+                */}
+                <span className={isActive ? "inline" : "hidden sm:inline"}>{label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex-1 max-w-7xl w-full mx-auto p-6">
-        <Tabs defaultValue="explorer" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="explorer" className="flex gap-2"><Code className="w-4 h-4" /> Code Explorer</TabsTrigger>
-            <TabsTrigger value="reviews" className="flex gap-2"><FileSearch className="w-4 h-4" /> AI Reviews</TabsTrigger>
-            <TabsTrigger value="chat" className="flex gap-2"><MessageSquareCode className="w-4 h-4" /> AI Chat</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="explorer" className="mt-0">
-            <CodeExplorer projectId={projectId} />
-          </TabsContent>
-
-          <TabsContent value="reviews" className="mt-0">
-            <ReviewDashboard projectId={projectId} />
-          </TabsContent>
-
-          <TabsContent value="chat" className="mt-0">
-            <AIChat projectId={projectId} />
-          </TabsContent>
-        </Tabs>
+      {/* ── Tab Content ─────────────────────────────────────────────── */}
+      <div className="flex-1 max-w-7xl w-full mx-auto p-4">
+        {activeTab === "explorer" && <CodeExplorer projectId={projectId} />}
+        {activeTab === "reviews"  && <ReviewDashboard projectId={projectId} />}
+        {activeTab === "chat"     && <AIChat projectId={projectId} />}
       </div>
+
     </div>
   );
 }

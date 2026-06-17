@@ -94,9 +94,9 @@ export default function AIChat({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div className="flex h-[600px] gap-6">
+    <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-220px)] lg:min-h-[600px] gap-6">
       {/* Session List */}
-      <Card className="w-1/4 flex flex-col overflow-hidden">
+      <Card className="w-full lg:w-1/4 h-[250px] lg:h-full flex flex-col overflow-hidden">
         <div className="p-4 border-b flex justify-between items-center">
           <h3 className="font-semibold text-lg flex items-center gap-2"><Code2 className="w-5 h-5"/> Chat Sessions</h3>
           <Button variant="ghost" size="icon" onClick={() => setSelectedSession("")} title="New Chat"><Plus className="w-4 h-4"/></Button>
@@ -124,12 +124,14 @@ export default function AIChat({ projectId }: { projectId: string }) {
       </Card>
 
       {/* Chat Area */}
-      <Card className="flex-1 flex flex-col overflow-hidden">
+      <Card className="w-full lg:flex-1 h-[500px] lg:h-full flex flex-col overflow-hidden">
         <div className="p-4 border-b flex justify-between items-center bg-muted/10">
           <div className="font-medium">{selectedSession ? 'Conversation' : 'New Chat (Ask about codebase)'}</div>
           <Select value={selectedProvider} onValueChange={(val) => setSelectedProvider(val || "")}>
-            <SelectTrigger className="w-[180px] h-8">
-              <SelectValue placeholder="AI Provider" />
+            <SelectTrigger className="w-[180px] h-8 truncate">
+              <SelectValue placeholder="AI Provider">
+                {providers.find(p => p.id === selectedProvider)?.name || "Select AI"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {providers.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
