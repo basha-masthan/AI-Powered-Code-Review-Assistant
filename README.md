@@ -1,6 +1,6 @@
 # AI-Powered Code Review Assistant
 
-A full-stack application that enables developers to upload source code, repositories, or project files and receive structured AI-generated code reviews using configurable AI models (OpenAI, LM Studio, Ollama, OpenRouter).
+A full-stack application that enables developers to upload source code, repositories, or project files and receive structured AI-generated code reviews using configurable AI models (OpenAI, LM Studio, Ollama, OpenRouter, Groq, and any OpenAI-compatible endpoint).
 
 ## Features
 
@@ -18,21 +18,14 @@ A full-stack application that enables developers to upload source code, reposito
 
 - **Frontend**: Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui (Base UI), Zustand, Axios
 - **Backend**: NestJS, TypeScript, Prisma ORM, Passport JWT, LangChain
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL (Remote Neon for production)
 
 ## Setup Instructions
 
 ### Prerequisites
 - Node.js (v18+)
-- Docker (for PostgreSQL)
 
-### 1. Database Setup
-Start the PostgreSQL database using Docker Compose:
-```bash
-docker-compose up -d
-```
-
-### 2. Backend Setup
+### 1. Backend Setup
 ```bash
 cd backend
 cp .env.example .env  # Edit with your settings
@@ -44,7 +37,7 @@ The backend will run on `http://localhost:3001`.
 
 **Environment Variables** (`backend/.env`):
 ```
-DATABASE_URL="postgresql://postgres:password@localhost:5432/codereview?schema=public"
+DATABASE_URL="postgresql://neondb_owner:npg_QlIJw2DBXUS7@ep-cool-flower-adfpwyt8-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&schema=strix_ai"
 JWT_SECRET="your-super-secret-jwt-key-change-in-production"
 PORT=3001
 
@@ -54,7 +47,7 @@ PORT=3001
 # GROQ_API_KEY="gsk_..."
 ```
 
-### 3. Frontend Setup
+### 2. Frontend Setup
 ```bash
 cd frontend
 npm install
@@ -75,3 +68,21 @@ The frontend will run on `http://localhost:3000`. Open it in your browser.
 6. Switch to **AI Reviews**, select your provider and template (Security, Performance, Code Quality), and click **Start Review**.
 7. Use **Docs** and **Tests** bonus buttons to generate documentation and unit tests.
 8. Switch to **AI Chat** to ask questions about the code.
+
+## AI Usage Report
+
+This project was developed with AI assistance, including code generation, architecture planning, and implementation. AI tools used include:
+
+- **ChatGPT** for initial concept development and architecture decisions
+- **Claude** for code implementation and debugging
+- **GitHub Copilot** for iterative code improvements
+- **Integrated AI Libraries**: `@langchain/openai` for the application's AI functionality
+
+100% of the code (excluding framework boilerplates and shadcn/ui components) was AI-generated and manually reviewed/verified.
+
+## Acknowledgments
+
+- Built with **NestJS**, **Next.js**, **Prisma**, **shadcn/ui**, **Zustand**, and **Tailwind CSS**
+- Uses **LangChain** for flexible AI provider integration
+- Supports multiple AI providers through OpenAI-compatible endpoints
+- Feature-complete production-ready code review assistant
